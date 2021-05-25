@@ -354,6 +354,10 @@ export function isRepeated(field: FieldDescriptorProto): boolean {
   return field.label === FieldDescriptorProto_Label.LABEL_REPEATED;
 }
 
+export function isOptional(field: FieldDescriptorProto): boolean {
+  return field.proto3Optional || field.label === FieldDescriptorProto_Label.LABEL_OPTIONAL;
+}
+
 export function isLong(field: FieldDescriptorProto): boolean {
   return basicLongWireType(field.type) !== undefined;
 }
@@ -507,7 +511,7 @@ export function toTypeName(ctx: Context, messageDesc: DescriptorProto, field: Fi
   // union with `undefined` here, either.
   const { options } = ctx;
   if (
-    (!isWithinOneOf(field) && isMessage(field) && !options.useOptionals) ||
+    (!isWithinOneOf(field) && isMessage(field) && !isOptional(field)) ||
     (isWithinOneOf(field) && options.oneof === OneofOption.PROPERTIES) ||
     (isWithinOneOf(field) && field.proto3Optional)
   ) {

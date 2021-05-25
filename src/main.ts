@@ -31,6 +31,7 @@ import {
   toReaderCall,
   toTypeName,
   valueTypeName,
+  isOptional,
 } from './types';
 import SourceInfo, { Fields } from './sourceInfo';
 import { maybeAddComment, maybePrefixPackage } from './utils';
@@ -483,7 +484,7 @@ function makeTimestampMethods(options: Options, longs: ReturnType<typeof makeLon
 
 // When useOptionals=true, non-scalar fields are translated into optional properties.
 function isOptionalProperty(field: FieldDescriptorProto, options: Options): boolean {
-  return (options.useOptionals && isMessage(field) && !isRepeated(field)) || field.proto3Optional;
+  return (options.useOptionals && isMessage(field) && !isRepeated(field)) || isOptional(field);
 }
 
 // Create the interface with properties
@@ -839,6 +840,12 @@ function generateEncode(ctx: Context, fullName: string, messageDesc: DescriptorP
           ${writeSnippet(`message.${fieldName}`)};
         }
       `);
+    } else if (isOptional(field)) {
+      chunks.push(code`
+        if (message.${fieldName} !== undefined) {
+          ${writeSnippet(`message.${fieldName}`)};
+        }
+      `);
     } else {
       chunks.push(code`${writeSnippet(`message.${fieldName}`)};`);
     }
@@ -988,7 +995,8 @@ function generateFromJson(ctx: Context, fullName: string, messageDesc: Descripto
     if (
       !isRepeated(field) &&
       field.type !== FieldDescriptorProto_Type.TYPE_BYTES &&
-      options.oneof !== OneofOption.UNIONS
+      options.oneof !== OneofOption.UNIONS &&
+      !isOptional(field)
     ) {
       const v = isWithinOneOf(field) ? 'undefined' : defaultValue(ctx, field);
       chunks.push(code`} else {`);
@@ -1200,7 +1208,7 @@ function generateFromPartial(ctx: Context, fullName: string, messageDesc: Descri
       }
     }
 
-    if (!isRepeated(field) && options.oneof !== OneofOption.UNIONS) {
+    if (!isRepeated(field) && options.oneof !== OneofOption.UNIONS && !isOptional(field)) {
       chunks.push(code`} else {`);
       const v = isWithinOneOf(field) ? 'undefined' : defaultValue(ctx, field);
       chunks.push(code`message.${fieldName} = ${v}`);
